@@ -5,11 +5,13 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" />
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="node_modules/jstree/dist/jstree.min.js"></script>
         <style type="text/css" media="screen">
             body {
                 overflow: hidden;
-                display: flex;
-                flex-direction: column;
+                scrollbar-color: #555 #333; /* スクロールバーの色を変更 */
             }
          
             /* エディタのスタイル */
@@ -17,13 +19,12 @@
                 top: 25px;
                 left: 253px;
                 right: 0;
-                bottom: 223px; /* フッターの高さ分だけ上にずらす */
+                bottom: auto; /* フッターの高さ分だけ上にずらす */
                 margin: 0;
                 position: absolute;
                 width: calc(100% - 253px);
-                height: calc(100vh - 203px); /* フッターとターミナルの高さ分だけ高さを減らす */
+                height: calc(100% - 223px); /* フッターとターミナルの高さ分だけ高さを減らす */
                 z-index: 1; /* 表示順位を下げる */
-                flex-grow: 1;
             }
 
             /* ターミナルのスタイル */
@@ -33,8 +34,8 @@
                 left: 253px;
                 right: 0;
                 bottom: 8px;
-                width: calc(100% - 250px);
-                height: 180px;
+                width: calc(100% - 253px);
+                height: 190px;
                 z-index: 1; /* 表示順位を下げる */
                 background-color: black;
                 color: white;
@@ -51,7 +52,6 @@
                 background-color: #333;
                 z-index: 2; /* 表示順位を上げる */
                 overflow-y: scroll;
-                scrollbar-color: #555 #333; /* スクロールバーの色を変更 */
             }
 
             /* ファイルリストのスタイル */
@@ -87,7 +87,7 @@
                 top: 0;
                 left: 253px;
                 right: 0;
-                height: 25px;
+                height: 19px;
                 width: calc(100% - 253px);
                 background-color: black;
                 color: #fff;
@@ -103,19 +103,20 @@
                 right: 0;
                 height: 18px;
                 width: 100%;
-                background-color: #1F1F1F;
+                background-color: #1f1f1f;
                 color: #ccc;
-                padding: 3px;
                 font-size: 12px;
                 display: flex;
+                align-items: center;
                 z-index: 2;
-                justify-content: flex-end; /* 右寄せにする */
-                align-items: center; /* 垂直方向に中央揃え */
-                padding: 0 0;
             }
 
-            #footer div {
-                margin-right: 20px; /* 左にずらすためのマージン */
+            #content {
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding: 0 10px;
             }
 
             /* リサイズバーのスタイル */
@@ -134,7 +135,7 @@
     <body>
         <!-- サイドバー -->
         <div id="sidebar">
-            <ul id="file-list"></ul>
+            <div id="tree-container"></div>
         </div>
         <!-- リサイズバー -->
         <div id="resizer"></div>
@@ -146,16 +147,16 @@
         <div id="terminal"></div>
         <!-- フッター -->
         <div id="footer">
-            <div>行: <span id="line-number">0</span></div>
-            <div>列: <span id="column-number">0</span></div>
+            <div id="content">
+                <div>行: <span id="line-number">1</span></div>
+                <div>列: <span id="column-number">1</span></div>
+                <div id="message"></div>
+            </div>
         </div>
         <script src="src/ace.js" type="text/javascript" charset="utf-8"></script>
         <script src="editor.js" type="text/javascript" charset="utf-8"></script>
         <script src="renderer.js"></script>
         <script>
-            var editor = ace.edit("editor");
-            editor.setTheme("ace/theme/monokai");
-            editor.session.setMode("ace/mode/c_cpp");
 
             let currentFilePath = null;
             let currentContent = '';
@@ -164,17 +165,14 @@
             //ファイル名表示の初期化
             document.getElementById('filename').textContent = 'Untitled';            
 
-            // エディタのカーソル位置を監視して行数と列数を表示
-            editor.session.selection.on('changeCursor', () => {
-                const position = editor.getCursorPosition();
-                document.getElementById('line-number').textContent = position.row + 1;
-                document.getElementById('column-number').textContent = position.column + 1;
-            });
+
+            
 
             // エディタの内容が変更されたときの処理
             editor.session.on('change', () => {
-                isContentChanged = editor.getValue() !== currentContent;
-                ipcRenderer.send('content-changed', isContentChanged);
+                isContentChanged = true;
+                console.log('content changed');
+                ipcRenderer.send('content-changed', currentFilePath);
             });
 
             // サイドバーとエディタのサイズを変更するためのドラッグ操作
@@ -182,6 +180,7 @@
             const sidebar = document.getElementById('sidebar');
             const editorDiv = document.getElementById('editor');
             const terminal = document.getElementById('terminal');
+            const filename = document.getElementById('filename');
 
             let isResizing = false;
 
@@ -198,8 +197,8 @@
                 resizer.style.left = `${newWidth}px`;
                 editorDiv.style.left = `${newWidth + 3}px`;
                 editorDiv.style.width = `calc(100% - ${newWidth + 3}px)`;
-                document.getElementById('filename').style.left = `${newWidth + 3}px`;
-                document.getElementById('filename').style.width = `calc(100% - ${newWidth + 3}px)`;
+                filename.style.left = `${newWidth + 3}px`;
+                filename.style.width = `calc(100% - ${newWidth + 3}px)`;
                 terminal.style.left = `${newWidth + 3}px`;
                 terminal.style.width = `calc(100% - ${newWidth + 3}px)`;
             };

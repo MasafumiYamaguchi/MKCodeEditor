@@ -5,7 +5,6 @@ const { NodeSSH } = require('node-ssh')
 
 const ssh = new NodeSSH();
 let win;
-
 let currentFilePath = null // 現在開いているファイルのパスを保持
 
 const createWindow = () => {
@@ -61,9 +60,17 @@ const templateMenu = [
       {
         label: 'Open Folder',
         accelerator: 'Ctrl+Shift+O',
-        click() {
-          win = BrowserWindow.getFocusedWindow()
-          win.webContents.send('open-folder')
+        click: async () => {
+          const result = await dialog.showOpenDialog(win, {
+            properties: ['openDirectory']
+          });
+
+          if (!result.canceled) {
+            const dirPath = result.filePaths[0];
+            console.log('Selected Folder:', dirPath);
+            const tree = getFilesRecursively(dirPath);
+            win.webContents.send('directory-tree', tree);
+          }
         }
       },
         {
@@ -113,39 +120,39 @@ app.on('activate', () => {
 })
 
 ipcMain.on('save-file', (event, currentFilePath, content) => {
-  win = BrowserWindow.getFocusedWindow()
-  if (currentFilePath) {
-    fs.writeFile(currentFilePath, content, (err) => {
-      if (err) {
-        console.log('File Save Error:', err)
-      } else {
-        console.log('File Saved Successfully')
-        event.sender.send('file-saved', currentFilePath)
-      }
-    })
-  } else {
-    dialog.showSaveDialog(win, {
-      title: 'Save File',
-      defaultPath: 'untitled.txt',
-      filters: [
-        { name: 'All Files', extensions: ['*'] }
-      ]
-    }).then(result => {
-      if (!result.canceled) {
-        fs.writeFile(result.filePath, content, (err) => {
-          if (err) {
-            console.log('File Save Error:', err)
-          } else {
-            console.log('File Saved Successfully')
-            event.sender.send('file-saved', result.filePath)
-          }
-        })
-      }
-    }).catch(err => {
-      console.log('Save Dialog Error:', err)
-    })
-  }
-})
+  win = BrowserWindow.getFocusedWindow();
+    if (currentFilePath) {
+      fs.writeFile(currentFilePath, content, (err) => {
+        if (err) {
+          console.log('File Save Error:', err);
+        } else {
+          console.log('File Saved Successfully');
+          event.sender.send('file-saved', currentFilePath);
+        }
+      });
+    } else {
+      dialog.showSaveDialog(win, {
+        title: 'Save File',
+        defaultPath: 'untitled.txt',
+        filters: [
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      }).then(result => {
+        if (!result.canceled && result.filePath) {
+          fs.writeFile(result.filePath, content, (err) => {
+            if (err) {
+              console.log('File Save Error:', err);
+            } else {
+              console.log('File Saved Successfully');
+              event.sender.send('file-saved', result.filePath);
+            }
+          });
+        }
+      }).catch(err => {
+        console.log('Save Dialog Error:', err);
+      });
+    }
+});
 
 ipcMain.on('save-as-file', (event, content) => {
   win = BrowserWindow.getFocusedWindow()
@@ -194,53 +201,72 @@ ipcMain.on('open-dialog', (event) => {
   })
 })
 
-const getFilesRecursively = (dir) => {
-  const files = fs.readdirSync(dir)
+
+function getFilesRecursively(dir) {
+  const files = fs.readdirSync(dir);
   return files.map(file => {
-    const filePath = path.join(dir, file)
-    const stats = fs.statSync(filePath)
-    if (stats.isDirectory()) {
-      return {
-        name: file,
-        type: 'directory',
-        path: filePath,
-        children: getFilesRecursively(filePath)
+      const filePath = path.join(dir, file);
+      const stat = fs.statSync(filePath);
+      if (stat.isDirectory()) {
+          return {
+              text: file,
+              children: getFilesRecursively(filePath),
+              icon: 'jstree-folder',
+              filePath: null,
+          };
+      } else {
+          return {
+              text: file,
+              children: [],
+              icon: 'jstree-file',
+              filePath: filePath,
+          };
       }
-    } else {
-      return {
-        name: file,
-        type: 'file',
-        path: filePath
-      }
-    }
-  })
+  });
 }
 
-ipcMain.on('open-folder-dialog', (event) => {
-  win = BrowserWindow.getFocusedWindow()
-  dialog.showOpenDialog(win, {
+ipcMain.on('open-folder-dialog', async (event) => {
+  const result = await dialog.showOpenDialog({
     properties: ['openDirectory']
-  }).then(result => {
-    if (!result.canceled) {
-      const folderStructure = getFilesRecursively(result.filePaths[0])
-      event.sender.send('folder-opened', folderStructure)
-      console.log('Folder Structure:', JSON.stringify(folderStructure, null, 2)) // デバッグ用に追加
-    }
-  }).catch(err => {
-    console.log('Open Folder Dialog Error:', err)
-  })
-})
+  });
+
+  if (!result.canceled) {
+    const dirPath = result.filePaths[0];
+    const tree = getFilesRecursively(dirPath);
+    console.log("filePath", dirPath);
+    event.sender.send('directory-tree', tree);
+  }
+});
+
+ipcMain.handle('open-folder-dialog', async (event) => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  });
+
+  if (!result.canceled) {
+    return result.filePaths[0];
+  }
+  return null;
+});
+
+ipcMain.handle('get-directory-tree', async (event, dirPath) => {
+  if (dirPath) {
+    const tree = getFilesRecursively(dirPath);
+    return tree;
+  }
+  return [];
+});
 
 ipcMain.on('read-file', (event, filePath) => {
   fs.readFile(filePath, 'utf-8', (err, data) => {
+    currentFilePath = filePath;
     if (err) {
-      console.log('File Read Error:', err)
-    } else {
-      console.log('File Read Successfully:', data) // デバッグ用に追加
-      event.sender.send('file-opened', data, filePath)
+      console.error('File read error:', err);
+      return;
     }
-  })
-})
+    event.sender.send('file-opened', data, filePath);
+  });
+});
 
 //SSHクライアントの処理
 

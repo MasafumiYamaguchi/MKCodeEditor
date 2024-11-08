@@ -1,6 +1,8 @@
 const { ipcRenderer } = require('electron');
 const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
+const $ = require('jquery');
+require('jstree');
 
 
 //ターミナルの初期化
@@ -141,64 +143,84 @@ ipcRenderer.on('open-folder', () => {
     ipcRenderer.send('open-folder-dialog')
 })
 
-// フォルダが開かれたときの処理
-ipcRenderer.on('folder-opened', (event, folderStructure) => {
-    console.log('Folder Structure:', folderStructure) // デバッグ用に追加
-    const fileList = document.getElementById('file-list')
-    fileList.innerHTML = ''
-    
-    const createFileList = (files) => {
-        const ul = document.createElement('ul')
-        files.forEach(file => {
-            const li = document.createElement('li')
-            li.textContent = file.name
-            li.dataset.path = file.path
-            if (file.type === 'directory') {
-                li.classList.add('folder') // フォルダの場合は黄色にする
-                li.appendChild(createFileList(file.children))
-            } else {
-                li.classList.add('file') // ファイルの場合は白にする
-                li.addEventListener('click', () => {
-                    if (isContentChanged) {
-                        const shouldSave = confirm('変更が保存されていません。保存しますか？');
-                        console.log('isContentChanged:', isContentChanged);
-                        if (shouldSave) {
-                            ipcRenderer.send('save-file', currentFilePath, editor.getValue());
-                            ipcRenderer.once('file-saved', () => {
-                                openFile(file.path);
-                            });
-                            console.log('Save file:', currentFilePath);
-                        } else {
-                            openFile(file.path);
-                            console.log('Open file:', file.path);
-                        }
-                    } else {
-                        openFile(file.path);
-                        console.log('Open file:', file.path);
-                    }
-                    
-                })
-            }
-            ul.appendChild(li)
-        })
-        return ul
-    }
 
-    fileList.appendChild(createFileList(folderStructure))
-})
 
 //エディタの中身が変更されたときにisContentChangedをtrueにする
 ipcRenderer.on('content-changed', (event, changed) => {
     isContentChanged = changed;
 });
 
+
+//directory-treeを受け取りフォルダ構造を表示
+ipcRenderer.on('directory-tree', (event, tree) => {
+    // ツリーを初期化
+    const treeContainer = $('#tree-container').jstree(true);
+    if (treeContainer) {
+        treeContainer.settings.core.data = tree.map(node => ({
+            text: node.text,
+            children: node.children,
+            filePath: node.filePath,
+            icon: node.icon
+        }));
+        treeContainer.refresh(); // ツリーをリフレッシュ
+    } else {
+        $('#tree-container').jstree({
+            'core': {
+                'data': tree.map(node => ({
+                    text: node.text,
+                    children: node.children,
+                    filePath: node.filePath,
+                    icon: node.icon
+                }))
+            }
+        });
+    }
+});
+
+/*
+async function loadDirectoryTree() {
+
+
+    if (dirPath) {
+        const treeData = await ipcRenderer.invoke('get-directory-tree', dirPath);
+        const treeContainer = $('#tree-container').jstree(true);
+
+        if (treeContainer) {
+            treeContainer.settings.core.data = [];
+            treeContainer.refresh();
+            treeContainer.settings.core.data = treeData;
+            treeContainer.refresh();
+        } else {
+            $('#tree-container').jstree({
+                'core': {
+                    'data': treeData
+                }
+            });
+        }
+    }
+}
+*/
+
+//ツリーのクリックイベントをリッスン
+$('#tree-container').on('select_node.jstree', (e, data) => {
+    const filePath = data.node.original.filePath;
+    console.log(filePath);
+    if (filePath) {
+        openFile(filePath);
+    }
+});
+
 const openFile = (filePath) => {
     ipcRenderer.send('read-file', filePath);
-    ipcRenderer.once('file-read', (event, content) => {
-        currentFilePath = filePath;
-        currentContent = content;
-        document.getElementById('filename').textContent = filePath;
-        editor.setValue(content, -1); // エディタの内容を変更
-        isContentChanged = false;
-    });
 };
+
+ipcRenderer.on('file-opened', (event, data, filePath) => {
+    editor.setValue(data);
+    currentFilePath = filePath;
+    currentContent = data;
+    isContentChanged = false;
+    document.getElementById('filename').textContent = filePath;
+});
+
+//ツリーの初期化
+loadDirectoryTree();
