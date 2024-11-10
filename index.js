@@ -1,4 +1,4 @@
-const { app, Menu, BrowserWindow, dialog, ipcMain } = require('electron')
+const { app, Menu, BrowserWindow, dialog, ipcMain, ipcRenderer } = require('electron')
 const fs = require('fs')
 const path = require('path')
 const { NodeSSH } = require('node-ssh')
@@ -144,6 +144,8 @@ ipcMain.on('save-file', (event, currentFilePath, content) => {
               console.log('File Save Error:', err);
             } else {
               console.log('File Saved Successfully');
+              const tree = getFilesRecursively(path.dirname(result.filePath));
+              event.sender.send('directory-tree', tree);
               event.sender.send('file-saved', result.filePath);
             }
           });
@@ -153,6 +155,7 @@ ipcMain.on('save-file', (event, currentFilePath, content) => {
       });
     }
 });
+
 
 ipcMain.on('save-as-file', (event, content) => {
   win = BrowserWindow.getFocusedWindow()
@@ -268,6 +271,9 @@ ipcMain.on('read-file', (event, filePath) => {
   });
 });
 
+
+
+
 //SSHクライアントの処理
 
 ipcMain.handle('ssh-connect', async (event, { host, username, password} ) => {
@@ -298,3 +304,5 @@ ipcMain.handle('ssh-exec', (event, command) => {
     channel.write(command + '\n');
   }
 });
+
+

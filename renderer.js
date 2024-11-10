@@ -3,6 +3,8 @@ const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
 const $ = require('jquery');
 require('jstree');
+const path = require('path');
+const fs = require('fs');
 
 
 //ターミナルの初期化
@@ -143,16 +145,54 @@ ipcRenderer.on('open-folder', () => {
     ipcRenderer.send('open-folder-dialog')
 })
 
-
-
 //エディタの中身が変更されたときにisContentChangedをtrueにする
 ipcRenderer.on('content-changed', (event, changed) => {
     isContentChanged = changed;
 });
 
-
 //directory-treeを受け取りフォルダ構造を表示
 ipcRenderer.on('directory-tree', (event, tree) => {
+    refreshTree(tree);
+});
+
+const openFile = (filePath) => {
+    ipcRenderer.send('read-file', filePath);
+};
+
+ipcRenderer.on('file-opened', (event, data, filePath) => {
+    editor.setValue(data);
+    currentFilePath = filePath;
+    currentContent = data;
+    isContentChanged = false;
+    document.getElementById('filename').textContent = filePath;
+
+});
+
+function getFilesRecursively(dir) {
+    const files = fs.readdirSync(dir);
+    return files.map(file => {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            return {
+                text: file,
+                children: getFilesRecursively(filePath),
+                icon: 'jstree-folder',
+                filePath: null,
+            };
+        } else {
+            return {
+                text: file,
+                children: [],
+                icon: 'jstree-file',
+                filePath: filePath,
+            };
+        }
+    });
+}
+
+function refreshTree(tree) {
+    console.log('refreshed');
     // ツリーを初期化
     const treeContainer = $('#tree-container').jstree(true);
     if (treeContainer) {
@@ -175,52 +215,29 @@ ipcRenderer.on('directory-tree', (event, tree) => {
             }
         });
     }
-});
-
-/*
-async function loadDirectoryTree() {
-
-
-    if (dirPath) {
-        const treeData = await ipcRenderer.invoke('get-directory-tree', dirPath);
-        const treeContainer = $('#tree-container').jstree(true);
-
-        if (treeContainer) {
-            treeContainer.settings.core.data = [];
-            treeContainer.refresh();
-            treeContainer.settings.core.data = treeData;
-            treeContainer.refresh();
-        } else {
-            $('#tree-container').jstree({
-                'core': {
-                    'data': treeData
-                }
-            });
-        }
-    }
 }
-*/
 
-//ツリーのクリックイベントをリッスン
-$('#tree-container').on('select_node.jstree', (e, data) => {
-    const filePath = data.node.original.filePath;
-    console.log(filePath);
-    if (filePath) {
-        openFile(filePath);
+ipcRenderer.on('refresh-tree', (tree) => {
+    refreshTree(tree);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshButton = document.getElementById('refresh');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', () => {
+            console.log('refresh clicked');
+            const tree = getFilesRecursively(currentFilePath);
+            refreshTree(tree);
+        });
+    } else {
+        console.error('Refresh button not found');
     }
+
+    $('#tree-container').on('select_node.jstree', (e, data) => {
+        const filePath = data.node.original.filePath;
+        console.log(filePath);
+        if (filePath) {
+            openFile(filePath);
+        }
+    });
 });
-
-const openFile = (filePath) => {
-    ipcRenderer.send('read-file', filePath);
-};
-
-ipcRenderer.on('file-opened', (event, data, filePath) => {
-    editor.setValue(data);
-    currentFilePath = filePath;
-    currentContent = data;
-    isContentChanged = false;
-    document.getElementById('filename').textContent = filePath;
-});
-
-//ツリーの初期化
-loadDirectoryTree();

@@ -130,17 +130,31 @@
                 left: 250px; /* サイドバーの右側に配置 */
                 z-index: 3;
             }
+
+            #refresh {
+                position: absolute;
+                left: 0;
+                width: 100px;
+                height: 18px;
+                background-color: #1f1f1f;
+                color: #ccc;
+                font-size: 12px;
+                cursor: pointer;
+                z-index: 3;
+            }
         </style>
     </head>
     <body>
         <!-- サイドバー -->
+        <!--<button id="refresh">リフレッシュ</button>-->
         <div id="sidebar">
             <div id="tree-container"></div>
+
         </div>
         <!-- リサイズバー -->
         <div id="resizer"></div>
         <!-- ファイル名表示 -->
-        <div id="filename"></div>
+        <div id="filename">Untitled</div>
         <!-- エディタ -->
         <div id="editor"></div>
         <!--ターミナル-->
@@ -165,7 +179,9 @@
             //ファイル名表示の初期化
             document.getElementById('filename').textContent = 'Untitled';            
 
-
+            document.getElementById('refresh').addEventListener('click', () => {
+                console.log('refresh');
+            });
             
 
             // エディタの内容が変更されたときの処理
@@ -181,6 +197,7 @@
             const editorDiv = document.getElementById('editor');
             const terminal = document.getElementById('terminal');
             const filename = document.getElementById('filename');
+            const refresh = document.getElementById('refresh');
 
             let isResizing = false;
 
@@ -208,6 +225,7 @@
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
             };
+
         </script>
     </body>
 </html>
