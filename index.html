@@ -1,231 +1,226 @@
 <!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <title>MK Code Editor</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css"/>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" />
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="node_modules/jstree/dist/jstree.min.js"></script>
-        <style type="text/css" media="screen">
-            body {
-                overflow: hidden;
-                scrollbar-color: #555 #333; /* スクロールバーの色を変更 */
-            }
-         
-            /* エディタのスタイル */
-            #editor {
-                top: 25px;
-                left: 253px;
-                right: 0;
-                bottom: auto; /* フッターの高さ分だけ上にずらす */
-                margin: 0;
-                position: absolute;
-                width: calc(100% - 253px);
-                height: calc(100% - 223px); /* フッターとターミナルの高さ分だけ高さを減らす */
-                z-index: 1; /* 表示順位を下げる */
-            }
+  <head>
+    <title>MK Code Editor</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css"
+    />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="node_modules/jstree/dist/jstree.min.js"></script>
+    <style type="text/css" media="screen">
+      body {
+        overflow: hidden;
+        scrollbar-color: #555 #333; /* スクロールバーの色を変更 */
+      }
 
-            /* ターミナルのスタイル */
-            #terminal {
-                position: absolute;
-                top: auto;
-                left: 253px;
-                right: 0;
-                bottom: 8px;
-                width: calc(100% - 253px);
-                height: 190px;
-                z-index: 1; /* 表示順位を下げる */
-                background-color: black;
-                color: white;
-            }
+      /* エディタのスタイル */
+      #editor {
+        top: 25px;
+        left: 253px;
+        right: 0;
+        bottom: auto; /* フッターの高さ分だけ上にずらす */
+        margin: 0;
+        position: absolute;
+        width: calc(100% - 253px);
+        height: calc(
+          100% - 223px
+        ); /* フッターとターミナルの高さ分だけ高さを減らす */
+        z-index: 1; /* 表示順位を下げる */
+      }
 
-            /* サイドバーのスタイル */
-            #sidebar {
-                position: absolute;
-                top: 0;
-                left: 0;
-                bottom: 18px; /* フッターの高さ分だけ上にずらす */
-                width: 250px;
-                height: calc(100vh - 18px); /* フッターの高さ分だけ高さを減らす */
-                background-color: #333;
-                z-index: 2; /* 表示順位を上げる */
-                overflow-y: scroll;
-            }
+      /* ターミナルのスタイル */
+      #terminal {
+        position: absolute;
+        top: auto;
+        left: 253px;
+        right: 0;
+        bottom: 15px;
+        width: calc(100% - 253px);
+        height: 190px;
+        z-index: 1; /* 表示順位を下げる */
+        background-color: black;
+        color: white;
+      }
 
-            /* ファイルリストのスタイル */
-            #file-list {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-                color: #fff;
-            }
+      /* サイドバーのスタイル */
+      #sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 18px; /* フッターの高さ分だけ上にずらす */
+        width: 250px;
+        height: calc(100vh - 18px); /* フッターの高さ分だけ高さを減らす */
+        background-color: #333;
+        z-index: 2; /* 表示順位を上げる */
+        overflow-y: scroll;
+        color: white;
+      }
 
-            #file-list li {
-                padding: 10px;
-                cursor: pointer;
-            }
+      /* ファイルリストのスタイル */
+      #file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        color: #fff;
+      }
 
-            #file-list li:hover {
-                background-color: #555;
-            }
+      #file-list li {
+        padding: 10px;
+        cursor: pointer;
+      }
 
-            /* フォルダのスタイル */
-            .folder {
-                color: yellow;
-            }
+      #file-list li:hover {
+        background-color: #555;
+      }
 
-            /* ファイルのスタイル */
-            .file {
-                color: white;
-            }
+      /* ファイル名表示のスタイル */
+      #filename {
+        position: absolute;
+        top: 0;
+        left: 253px;
+        right: 0;
+        height: 19px;
+        width: calc(100% - 253px);
+        background-color: black;
+        color: #fff;
+        padding: 3px;
+        font-size: 12px;
+      }
 
-            /* ファイル名表示のスタイル */
-            #filename {
-                position: absolute;
-                top: 0;
-                left: 253px;
-                right: 0;
-                height: 19px;
-                width: calc(100% - 253px);
-                background-color: black;
-                color: #fff;
-                padding: 3px;
-                font-size: 12px;
-            }
+      /* フッターのスタイル */
+      #footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 18px;
+        width: 100%;
+        background-color: #1f1f1f;
+        color: #ccc;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        z-index: 2;
+      }
 
-            /* フッターのスタイル */
-            #footer {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 18px;
-                width: 100%;
-                background-color: #1f1f1f;
-                color: #ccc;
-                font-size: 12px;
-                display: flex;
-                align-items: center;
-                z-index: 2;
-            }
+      #content {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 10px;
+      }
 
-            #content {
-                position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                padding: 0 10px;
-            }
+      /* リサイズバーのスタイル */
+      #resizer {
+        width: 3px;
+        background-color: #202020;
+        cursor: ew-resize;
+        position: absolute;
+        top: 0;
+        bottom: 18px; /* フッターの高さ分だけ上にずらす */
+        left: 250px; /* サイドバーの右側に配置 */
+        z-index: 3;
+      }
 
-            /* リサイズバーのスタイル */
-            #resizer {
-                width: 3px;
-                background-color: #202020;
-                cursor: ew-resize;
-                position: absolute;
-                top: 0;
-                bottom: 18px; /* フッターの高さ分だけ上にずらす */
-                left: 250px; /* サイドバーの右側に配置 */
-                z-index: 3;
-            }
+      #refresh {
+        position: absolute;
+        left: 0;
+        width: 100px;
+        height: 18px;
+        background-color: #1f1f1f;
+        color: #ccc;
+        font-size: 12px;
+        cursor: pointer;
+        z-index: 3;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- サイドバー -->
+    <!--<button id="refresh">リフレッシュ</button>-->
+    <div id="sidebar">
+      <div id="tree-container"></div>
+    </div>
+    <!-- リサイズバー -->
+    <div id="resizer"></div>
+    <!-- ファイル名表示 -->
+    <div id="filename">Untitled</div>
+    <!-- エディタ -->
+    <div id="editor"></div>
+    <!--ターミナル-->
+    <div id="terminal"></div>
+    <!-- フッター -->
+    <div id="footer">
+      <div id="content">
+        <div>行: <span id="line-number">1</span></div>
+        <div>列: <span id="column-number">1</span></div>
+        <div id="message"></div>
+      </div>
+    </div>
+    <script src="src/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="editor.js" type="text/javascript" charset="utf-8"></script>
+    <script src="renderer.js"></script>
+    <script>
+      let currentFilePath = null;
+      let currentContent = "";
+      let isContentChanged = false;
 
-            #refresh {
-                position: absolute;
-                left: 0;
-                width: 100px;
-                height: 18px;
-                background-color: #1f1f1f;
-                color: #ccc;
-                font-size: 12px;
-                cursor: pointer;
-                z-index: 3;
-            }
-        </style>
-    </head>
-    <body>
-        <!-- サイドバー -->
-        <!--<button id="refresh">リフレッシュ</button>-->
-        <div id="sidebar">
-            <div id="tree-container"></div>
+      //ファイル名表示の初期化
+      document.getElementById("filename").textContent = "Untitled";
 
-        </div>
-        <!-- リサイズバー -->
-        <div id="resizer"></div>
-        <!-- ファイル名表示 -->
-        <div id="filename">Untitled</div>
-        <!-- エディタ -->
-        <div id="editor"></div>
-        <!--ターミナル-->
-        <div id="terminal"></div>
-        <!-- フッター -->
-        <div id="footer">
-            <div id="content">
-                <div>行: <span id="line-number">1</span></div>
-                <div>列: <span id="column-number">1</span></div>
-                <div id="message"></div>
-            </div>
-        </div>
-        <script src="src/ace.js" type="text/javascript" charset="utf-8"></script>
-        <script src="editor.js" type="text/javascript" charset="utf-8"></script>
-        <script src="renderer.js"></script>
-        <script>
+      document.getElementById("refresh").addEventListener("click", () => {
+        console.log("refresh");
+      });
 
-            let currentFilePath = null;
-            let currentContent = '';
-            let isContentChanged = false;
+      // エディタの内容が変更されたときの処理
+      editor.session.on("change", () => {
+        isContentChanged = true;
+        console.log("content changed");
+        ipcRenderer.send("content-changed", currentFilePath);
+      });
 
-            //ファイル名表示の初期化
-            document.getElementById('filename').textContent = 'Untitled';            
+      // サイドバーとエディタのサイズを変更するためのドラッグ操作
+      const resizer = document.getElementById("resizer");
+      const sidebar = document.getElementById("sidebar");
+      const editorDiv = document.getElementById("editor");
+      const terminal = document.getElementById("terminal");
+      const filename = document.getElementById("filename");
+      const refresh = document.getElementById("refresh");
 
-            document.getElementById('refresh').addEventListener('click', () => {
-                console.log('refresh');
-            });
-            
+      let isResizing = false;
 
-            // エディタの内容が変更されたときの処理
-            editor.session.on('change', () => {
-                isContentChanged = true;
-                console.log('content changed');
-                ipcRenderer.send('content-changed', currentFilePath);
-            });
+      resizer.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
 
-            // サイドバーとエディタのサイズを変更するためのドラッグ操作
-            const resizer = document.getElementById('resizer');
-            const sidebar = document.getElementById('sidebar');
-            const editorDiv = document.getElementById('editor');
-            const terminal = document.getElementById('terminal');
-            const filename = document.getElementById('filename');
-            const refresh = document.getElementById('refresh');
+      const onMouseMove = (e) => {
+        if (!isResizing) return;
+        const newWidth = e.clientX;
+        sidebar.style.width = `${newWidth}px`;
+        resizer.style.left = `${newWidth}px`;
+        editorDiv.style.left = `${newWidth + 3}px`;
+        editorDiv.style.width = `calc(100% - ${newWidth + 3}px)`;
+        filename.style.left = `${newWidth + 3}px`;
+        filename.style.width = `calc(100% - ${newWidth + 3}px)`;
+        terminal.style.left = `${newWidth + 3}px`;
+        terminal.style.width = `calc(100% - ${newWidth + 3}px)`;
+      };
 
-            let isResizing = false;
-
-            resizer.addEventListener('mousedown', (e) => {
-                isResizing = true;
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
-
-            const onMouseMove = (e) => {
-                if (!isResizing) return;
-                const newWidth = e.clientX;
-                sidebar.style.width = `${newWidth}px`;
-                resizer.style.left = `${newWidth}px`;
-                editorDiv.style.left = `${newWidth + 3}px`;
-                editorDiv.style.width = `calc(100% - ${newWidth + 3}px)`;
-                filename.style.left = `${newWidth + 3}px`;
-                filename.style.width = `calc(100% - ${newWidth + 3}px)`;
-                terminal.style.left = `${newWidth + 3}px`;
-                terminal.style.width = `calc(100% - ${newWidth + 3}px)`;
-            };
-
-            const onMouseUp = () => {
-                isResizing = false;
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            };
-
-        </script>
-    </body>
+      const onMouseUp = () => {
+        isResizing = false;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+    </script>
+  </body>
 </html>
