@@ -30,10 +30,10 @@
             /* ターミナルのスタイル */
             #terminal {
                 position: absolute;
-                top: auto;
                 left: 253px;
                 right: 0;
-                bottom: 8px;
+                top: cal(100% - 223px);
+                bottom: 15px;
                 width: calc(100% - 253px);
                 height: 190px;
                 z-index: 1; /* 表示順位を下げる */
@@ -52,6 +52,7 @@
                 background-color: #333;
                 z-index: 2; /* 表示順位を上げる */
                 overflow-y: scroll;
+                color: white;
             }
 
             /* ファイルリストのスタイル */
@@ -59,12 +60,12 @@
                 list-style: none;
                 padding: 0;
                 margin: 0;
-                color: #fff;
             }
 
             #file-list li {
                 padding: 10px;
                 cursor: pointer;
+                color: #fff;
             }
 
             #file-list li:hover {
@@ -78,7 +79,7 @@
 
             /* ファイルのスタイル */
             .file {
-                color: white;
+                color: #fff;
             }
 
             /* ファイル名表示のスタイル */
@@ -108,15 +109,26 @@
                 font-size: 12px;
                 display: flex;
                 align-items: center;
+                justify-content: space-between;
                 z-index: 2;
             }
 
             #content {
-                position: relative;
+                width: 100%;
                 display: flex;
                 align-items: center;
-                justify-content: flex-end;
+                justify-content: space-between;
                 padding: 0 10px;
+            }
+            
+            #lines {
+                align-items: center;
+                display: flex;
+                gap: 10px;
+            }
+            
+            #message {
+                text-align: right;
             }
 
             /* リサイズバーのスタイル */
@@ -162,8 +174,10 @@
         <!-- フッター -->
         <div id="footer">
             <div id="content">
-                <div>行: <span id="line-number">1</span></div>
-                <div>列: <span id="column-number">1</span></div>
+                <div id="lines">
+                    <div>行: <span id="line-number">1</span></div>
+                    <div>列: <span id="column-number">1</span></div>     
+                </div>
                 <div id="message"></div>
             </div>
         </div>

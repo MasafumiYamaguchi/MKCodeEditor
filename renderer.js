@@ -26,6 +26,9 @@ let host, username, password;
 terminal.write('SSH接続を開始します\r\n');
 terminal.write('ホスト名: ');
 
+//DOM要素の取得
+const message = document.getElementById('message');
+
 //ターミナルで入力したコマンドを送信
 terminal.onData(async (data) => {
     if (data === '\r') {
@@ -101,6 +104,10 @@ ipcRenderer.on('save-file', (event, filePath) => {
     const content = editor.getValue()
     ipcRenderer.send('save-file', filePath, content)
     isContentChanged = false;
+    message.textContent = "saved";
+    setTimeout(() => {
+        message.textContent = "";
+    }, 2000);
 })
 
 // 名前を付けてファイルを保存する処理

@@ -3,9 +3,14 @@ const fs = require('fs')
 const path = require('path')
 const { NodeSSH } = require('node-ssh')
 
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch(`disable-gpu-sandbox`);
+
 const ssh = new NodeSSH();
 let win;
 let currentFilePath = null // 現在開いているファイルのパスを保持
+
+
 
 const createWindow = () => {
   win = new BrowserWindow({
